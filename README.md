@@ -82,7 +82,7 @@ Navigate to **Interfaces → Devices → VLAN**. Created three VLANs on parent i
 | vlan02 | igb0 | 20 | Guest Network |
 | vlan03 | igb0 | 30 | IOT Devices |
 
-<!-- screenshot: 01_OPNsense_VLAN_list.png -->
+![OPNsense VLAN List](screenshots/01_OPNsense_VLAN_list.png)
 
 ### Step 1.2 — Assign VLAN Interfaces
 
@@ -94,7 +94,7 @@ Navigate to **Interfaces → Assignments**. Each VLAN was assigned as a named in
 | GuestNetwork | opt2 | vlan02 (igb0, Tag 20) |
 | IOTDevices | opt3 | vlan03 (igb0, Tag 30) |
 
-<!-- screenshot: 02_OPNsense_interface_assignments.png -->
+![Interface Assignments](screenshots/02_OPNsense_interface_assignments.png)
 
 ### Step 1.3 — Configure VLAN Interfaces
 
@@ -106,7 +106,11 @@ Each interface enabled with IPv4 Configuration Type set to Static IPv4. The assi
 | GuestNetwork | 10.20.20.1 / 24 |
 | IOTDevices | 10.30.30.1 / 24 |
 
-<!-- screenshot: 03_OPNsense_VLAN10_interface.png -->
+![MainNetworkVLAN Interface](screenshots/03a_OPNsense_MainNetworkVLAN.png)
+
+![GuestNetwork Interface](screenshots/03b_OPNsense_GuestNetwork.png)
+
+![IOTDevices Interface](screenshots/03c_OPNsense_IOTDevices.png)
 
 ### Step 1.4 — Configure DHCP per VLAN
 
@@ -124,8 +128,8 @@ Navigate to **Services → Dnsmasq DNS & DHCP → General** — enabled dnsmasq 
 
 Addresses .1 through .99 on each subnet are reserved for static infrastructure assignments.
 
-<!-- screenshot: 04_OPNsense_dnsmasq_general.png -->
-<!-- screenshot: 04b_OPNsense_dnsmasq_ranges.png -->
+![Dnsmasq General Settings](screenshots/04d_dnsmasq_general_final.png)
+![Dnsmasq DHCP Ranges](screenshots/04e_dnsmasq_DHCP_ranges_final.png)
 
 ---
 
@@ -157,10 +161,10 @@ Firewall rules applied per VLAN interface under **Firewall → Rules**. An RFC19
 
 > The gateway allow rule must be first. The RFC1918 alias includes the gateway IP (`10.20.20.1`, `10.30.30.1`), so without an explicit allow rule first, devices cannot reach DNS and have no internet despite the pass rule below.
 
-<!-- screenshot: 05a_RFC1918_alias.png -->
-<!-- screenshot: 05b_firewall_rules_MainNetworkVLAN.png -->
-<!-- screenshot: 05c_firewall_rules_GuestNetwork.png -->
-<!-- screenshot: 05d_firewall_rules_IOTDevices.png -->
+![RFC1918 Alias](screenshots/05a_RFC1918_alias.png)
+![Main Network Firewall Rules](screenshots/05b_firewall_rules_MainNetworkVLAN.png)
+![Guest Network Firewall Rules](screenshots/05c_firewall_rules_GuestNetwork_final.png)
+![IoT Devices Firewall Rules](screenshots/05d_firewall_rules_IOTDevices.png)
 
 ---
 
@@ -178,8 +182,8 @@ The switch default IP (192.168.1.120) was reassigned to `10.0.0.2` using the TP-
 | 4 | Main PC | — | 10 | 10 |
 | 5–8 | Unassigned | — | — | 1 |
 
-<!-- screenshot: 10_switch_802.1Q_VLAN_config.png -->
-<!-- screenshot: 11_switch_PVID_settings.png -->
+![Switch 802.1Q VLAN Configuration](screenshots/06e_switch_VLAN_final.png)
+![Switch PVID Settings](screenshots/07_switch_PVID_settings.png)
 
 ---
 
@@ -193,7 +197,7 @@ The EAP225 was configured in standalone mode via **Wireless → VLAN**. Each SSI
 | GuestNetwork | 20 | 2.4GHz | WPA2 |
 | IoT Devices | 30 | 2.4GHz | WPA2 |
 
-<!-- screenshot: 08_EAP225_VLAN_SSID_settings.png -->
+![EAP225 VLAN SSID Settings](screenshots/08_EAP225_VLAN_SSID_settings.png)
 
 ---
 
@@ -204,7 +208,7 @@ The EAP225 management interface sits on the native LAN (`10.0.0.0/24`) which is 
 **AP static IP via DHCP reservation:**
 A host reservation was added in dnsmasq under **Services → Dnsmasq DNS & DHCP → Hosts** binding the AP's MAC address (`cc:ba:bd:cf:ba:90`) to `10.0.0.3`, giving the AP a permanent predictable address without configuring it manually on the AP itself.
 
-<!-- screenshot: 09_dnsmasq_AP_reservation.png -->
+![Dnsmasq AP Host Reservation](screenshots/09_dnsmasq_AP_host_override.png)
 
 **Management access from main PC via outbound NAT:**
 An outbound NAT rule was added under **Firewall → NAT → Outbound** (switched to Hybrid mode) to masquerade VLAN 10 traffic destined for the native LAN as coming from OPNsense's LAN address (`10.0.0.1`). The AP sees all management requests as originating from `10.0.0.1` — same subnet — and accepts them.
@@ -216,7 +220,7 @@ An outbound NAT rule was added under **Firewall → NAT → Outbound** (switched
 | Destination | LAN net |
 | Translation | Interface address (10.0.0.1) |
 
-<!-- screenshot: 10_NAT_outbound_rule.png -->
+![NAT Outbound Rule](screenshots/10b_NAT_outbound_rule.png)
 
 The AP management interface is now accessible from the main PC at `https://10.0.0.3`.
 
@@ -230,9 +234,9 @@ Connectivity verified per VLAN:
 - [x] VLAN 20 (Guest) — internet confirmed; DHCP assigns `10.20.20.100–200`; ping to `10.10.10.1` (Main gateway) fails as expected — isolation working
 - [x] VLAN 30 (IoT) — internet confirmed; DHCP assigns `10.30.30.100–200`; ping to `10.10.10.1` (Main gateway) fails as expected — isolation working
 
-<!-- screenshot: 11_ARP_table_all_VLANs.png -->
-<!-- screenshot: 12_verification_VLAN10.png -->
-<!-- screenshot: 13_verification_Guest_IoT.png -->
+![ARP Table All VLANs](screenshots/11_ARP_table_all_VLANs.png)
+
+
 
 ---
 
@@ -297,4 +301,3 @@ Key skills demonstrated through real troubleshooting: DHCP server migration (Kea
 - Part 3 — Windows Server 2022 Active Directory Domain
 
 ---
-
