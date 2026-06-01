@@ -353,7 +353,7 @@ Add the following rule to both **Firewall → Rules → MainNetworkVLAN** and **
 | Destination Port | `5353` |
 | Description | Allow mDNS |
 
-![Firewall mDNS rule](screenshots/03_firewall_mdns_rule.png)
+![Firewall mDNS rule](screenshots/03_firewall_mdns_rule_iot.png)
 
 ---
 
