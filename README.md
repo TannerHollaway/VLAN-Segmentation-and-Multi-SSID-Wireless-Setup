@@ -315,6 +315,55 @@ DHCP, DNS, firewall isolation, and wireless SSID-to-VLAN mapping all confirmed w
 
 Key skills demonstrated through real troubleshooting: DHCP server migration (Kea → dnsmasq), firewall rule ordering, 802.1Q trunk/access port configuration, outbound NAT for cross-subnet management access, and AP management VLAN behaviour.
 
+# mDNS Repeater — IoT Device Discovery Across VLANs
+
+## Problem
+
+IoT devices such as printers advertise themselves using mDNS (Multicast DNS / Bonjour). Because VLANs are separate broadcast domains, these announcements never cross VLAN boundaries. A printer on the IoT VLAN is invisible to devices on the Main VLAN even though the firewall allows traffic between them.
+
+## Solution
+
+Install **os-mdns-repeater** on OPNsense to proxy mDNS announcements between VLANs. This solves discovery only — isolation is preserved. IoT devices still cannot initiate connections to the Main network.
+
+> **Static IP:** Giving IoT devices a DHCP reservation is good practice but not required. The mDNS announcement includes the device's current IP, so discovery works with dynamic addresses.
+
+---
+
+## Steps
+
+**1 — Install plugin**
+System → Firmware → Plugins → search `os-mdns-repeater` → install → reload page.
+
+![Plugin installed](screenshots/01_mdns_plugin_install.png)
+
+**2 — Configure repeater**
+Services → MDNS Repeater → Enable → set Listen Interfaces to `IOTDevices` and `MainNetworkVLAN` → Apply.
+
+![mDNS Repeater config](screenshots/02_mdns_repeater_config.png)
+
+**3 — Allow mDNS traffic**
+Add the following rule to both **Firewall → Rules → MainNetworkVLAN** and **Firewall → Rules → IOTDevices**:
+
+| Field | Value |
+|---|---|
+| Action | Pass |
+| Protocol | UDP |
+| Source | respective VLAN net |
+| Destination | `224.0.0.251` |
+| Destination Port | `5353` |
+| Description | Allow mDNS |
+
+![Firewall mDNS rule](screenshots/03_firewall_mdns_rule.png)
+
+---
+
+## Result
+
+Main network devices can now discover and communicate with IoT VLAN devices automatically. IoT devices remain unable to initiate connections to the Main network — isolation intact.
+
+<!-- screenshot: 04_verification.png -->
+
+
 ---
 
 ## Next Steps
