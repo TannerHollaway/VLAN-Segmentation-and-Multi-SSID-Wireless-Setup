@@ -28,6 +28,8 @@ This is Part 2 of a multi-part home lab series:
 | Access Point | TP-Link EAP225 Omada AC1350 |
 | Main PC | Connected via TP-Link AV1000 powerline adapter |
 
+**Powerline note:** The main PC connects via a TP-Link AV1000 powerline adapter rather than a direct ethernet run. While rated for 1Gbps, real-world throughput on powerline is highly variable — typically 100–300Mbps depending on electrical noise, wiring age, and circuit distance. Latency is also higher and less consistent than direct ethernet. This is a known tradeoff accepted for convenience in this setup. For a production environment or latency-sensitive workloads, a direct ethernet run would be preferable.
+
 ---
 
 ## Network Topology
@@ -54,6 +56,8 @@ ISP Modem → Existing Router (192.168.1.1)
 | 20 | Guest | 10.20.20.0/24 | 10.20.20.1 | 10.20.20.100–200 | Internet only — isolated |
 | 30 | IoT | 10.30.30.0/24 | 10.30.30.1 | 10.30.30.100–200 | Internet only — fully isolated |
 
+**Subnet choice rationale:** The `10.0.0.0/8` private range was chosen over `192.168.x.x` because it provides significantly more address space and flexibility for future route summarization. The VLAN ID is embedded in the second and third octets intentionally — `10.10.10.x` is VLAN 10, `10.20.20.x` is VLAN 20 — making the subnet immediately readable from any IP address without needing to cross-reference documentation. `/24` was chosen for simplicity and familiarity; 254 usable addresses per VLAN is more than sufficient for any home lab segment, and the math is trivial.
+
 ---
 
 ## Firewall Rules Summary
@@ -67,6 +71,10 @@ ISP Modem → Existing Router (192.168.1.1)
 | IoT (VLAN 30) | IOTDevices address | Allow | Gateway/DNS access |
 | IoT (VLAN 30) | RFC1918 | Block | No internal access |
 | IoT (VLAN 30) | Any | Allow | Internet only |
+
+**How isolation is enforced:** Guest and IoT devices are prevented from reaching any private IP range via the RFC1918 block rule. This covers the entire `10.0.0.0/8`, `172.16.0.0/12`, and `192.168.0.0/16` space in one rule — blocking access to the Main VLAN, the native management LAN, the switch, the AP, and OPNsense itself. The only exception is the gateway IP, which must be explicitly allowed first so DNS can function. The final allow-any rule then permits only public internet destinations since all private ranges were already blocked above it.
+
+**Extending with pinhole rules:** The current ruleset treats IoT as fully isolated from all other VLANs. In practice, IoT management platforms such as Home Assistant require the Main VLAN to initiate connections to IoT device IPs. This works by default since Main has an allow-all rule. However, if stricter control is needed, a targeted pinhole rule can be added to the IoT interface allowing only specific source/destination/port combinations — for example, allowing Main to reach IoT on TCP port 8123 (Home Assistant) while blocking everything else. This is the correct pattern for least-privilege inter-VLAN access.
 
 ---
 
@@ -182,6 +190,8 @@ The switch default IP (192.168.1.120) was reassigned to `10.0.0.2` using the TP-
 | 4 | Main PC | — | 10 | 10 |
 | 5–8 | Unassigned | — | — | 1 |
 
+**VLAN pruning:** Ports 3–8 are set to Not Member for VLANs 20 and 30 — this is VLAN pruning, the practice of only allowing VLANs on ports that actually need them. A device on Port 3 or 4 cannot send or receive Guest or IoT traffic at the hardware level, regardless of firewall rules. Only the trunk ports (1 and 2) carry all three VLANs because OPNsense needs to route all of them and the AP needs to broadcast all three SSIDs.
+
 ![Switch 802.1Q VLAN Configuration](screenshots/06e_switch_VLAN_final.png)
 ![Switch PVID Settings](screenshots/07_switch_PVID_settings.png)
 
@@ -228,11 +238,22 @@ The AP management interface is now accessible from the main PC at `https://10.0.
 
 ## Verification
 
-Connectivity verified per VLAN:
+Connectivity verified per VLAN using the following commands from a device on each network:
 
-- [x] VLAN 10 (Main) — wired and wireless internet confirmed; DHCP assigns `10.10.10.100–200`; ping to gateway, `8.8.8.8`, and `google.com` all successful
-- [x] VLAN 20 (Guest) — internet confirmed; DHCP assigns `10.20.20.100–200`; ping to `10.10.10.1` (Main gateway) fails as expected — isolation working
-- [x] VLAN 30 (IoT) — internet confirmed; DHCP assigns `10.30.30.100–200`; ping to `10.10.10.1` (Main gateway) fails as expected — isolation working
+| Test | Command | Expected Result |
+|------|---------|-----------------|
+| DHCP working | `ipconfig` (Windows) / `ip a` (Linux) | IP in correct pool range |
+| Gateway reachable | `ping 10.10.10.1` (or .20.1 / .30.1) | Reply from gateway |
+| Internet routing | `ping 8.8.8.8` | Reply from Google DNS |
+| DNS resolving | `ping google.com` | Resolves and replies |
+| VLAN isolation | `ping 10.10.10.1` from Guest or IoT | Request timed out |
+| AP reachable from Main | `curl -k https://10.0.0.3` | Returns HTML |
+
+Results:
+
+- [x] VLAN 10 (Main) — DHCP assigns `10.10.10.100–200`; gateway, `8.8.8.8`, and `google.com` all reply; wired and wireless confirmed
+- [x] VLAN 20 (Guest) — DHCP assigns `10.20.20.100–200`; internet confirmed; ping to `10.10.10.1` times out — isolation working
+- [x] VLAN 30 (IoT) — DHCP assigns `10.30.30.100–200`; internet confirmed; ping to `10.10.10.1` times out — isolation working
 
 ![ARP Table All VLANs](screenshots/11_ARP_table_all_VLANs.png)
 
@@ -298,6 +319,7 @@ Key skills demonstrated through real troubleshooting: DHCP server migration (Kea
 
 ## Next Steps
 
-- Part 3 — Windows Server 2022 Active Directory Domain
+- [Part 3 — Windows Server 2022 Active Directory Domain](https://github.com/TannerHollaway)
 
 ---
+
