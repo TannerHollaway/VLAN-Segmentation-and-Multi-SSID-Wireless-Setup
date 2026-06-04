@@ -368,7 +368,7 @@ Main network devices can now discover and communicate with IoT VLAN devices auto
 
 ## Next Steps
 
-- [Part 3 — Windows Server 2022 Active Directory Domain](https://github.com/TannerHollaway)
+- [Part 3 — Windows Server 2022 Active Directory Domain](https://github.com/TannerHollaway/Windows-Server-2022-Active-Directory-Domain)
 
 ---
 
